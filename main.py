@@ -26,16 +26,27 @@ def shortcut_name(name):
         shortname = shortname[:13] + '...' + shortname[-13:]
         return shortname
 
+def check_cyrillic_characters(string):
+    for char in string:
+        if ord(char) >= 1040 and ord(char) <= 1103:
+            return True
+    return False
+
 
 #функция для выбора папки и копирования имен файолов в буфер обмена
 def open_files_path():
     global FOLDER_PATH, OLD_FILE_NAMES, FILE_EXTENSION
     FOLDER_PATH = filedialog.askdirectory()
+    if len(os.listdir(FOLDER_PATH)) == 0:
+        mb.showerror(title="Ошибка", message=f'В папке отсутсвуют файлы.\nВыбирете другую папку')
+        FOLDER_PATH = ''
+        return
     label_folder_path.configure(text=f'Выбран путь: {FOLDER_PATH}')
-    label_txt.configure(text='')
+    label_txt.configure(text='Файл не выбран')
     label_status.configure(text='')
     OLD_FILE_NAMES.clear()
     OLD_FILE_NAMES += os_sorted(os.listdir(FOLDER_PATH))
+
     str_names = ''
     for i in range(len(OLD_FILE_NAMES)):
         name = OLD_FILE_NAMES[i]
@@ -61,15 +72,25 @@ def open_file_txt():
     except FileNotFoundError:
         mb.showerror(title="Ошибка", message=f'Файл не найден')
         label_txt.configure(text="Файл не выбран")
+        NEW_FILE_NAMES = ''
         return
     if len(NEW_FILE_NAMES) != len(os.listdir(FOLDER_PATH)):
         mb.showerror(title="Ошибка", message=f'Количество файлов в папке и количество строк в текстовом файле не совпадают')
         label_txt.configure(text="Файл не выбран")
+        NEW_FILE_NAMES = ''
         return
     for name in NEW_FILE_NAMES:
         check = check_character_in_string(name)
+        if check_cyrillic_characters(name) == True:
+            mb.showerror(title="Ошибка",
+                         message=f'В имени файла не должно содержаться кирилических символов.\nИсправте и выберите файл заново')
+            label_txt.configure(text="Файл не выбран")
+            NEW_FILE_NAMES = ''
+            return
         if check != "True":
-            mb.showerror(title="Ошибка", message=f'В имени файла {name} содержиться запрещенный символ "{check}"\nИсправте и выберите файл заново')
+            mb.showerror(title="Ошибка", message=f'В имени файла "{name}" содержиться запрещенный символ "{check}"\nИсправте и выберите файл заново')
+            label_txt.configure(text="Файл не выбран")
+            NEW_FILE_NAMES = ''
             return
 
 #функция для непосредственного переименовывания файлов
@@ -88,6 +109,15 @@ def start():
     FILE_EXTENSION.clear()
     NEW_FILE_NAMES.clear()
     FOLDER_PATH = ''
+
+def info():
+    mb.showinfo(title="Информация", message='1) Выбрать папку, в которой необходимо переименовать файлы. '
+                                            'После выбора папки имена файлов будут скопированы в буфер обмена в отсортированном виде от А до Я как в Windows.\n'
+                                            '2) Преобразовать имена файлов в нужные, например с помощью Excel. Имена не должны содержать '
+                                            'кирилицу и запрещенные символы:  \/:*?"<>|\n'
+                                            '3) Вставить новые имена файлов в txt файл и выбрать данный txt файл.\n'
+                                            '4) Нажать кнопку "Выполнить"\n')
+
 
 root = Tk()
 root.title("Renamer")
@@ -112,5 +142,9 @@ button_select_file.grid(column=0, row=1)
 
 button_start = Button(root, text='Выполнить', command=start)
 button_start.grid(column=0, row=2)
+
+button_info = Button(root, text='Как пользоваться', command=info)
+button_info.grid(column=0, row=3)
+
 
 root.mainloop()
